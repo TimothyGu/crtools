@@ -138,16 +138,16 @@ func scan(r io.Reader) (string, error) {
 				})
 
 				indentStr := strings.Repeat(" ", ind)
-				if minusTwoData.Type == StructDecl {
-					st.changes = append(st.changes, Change{
-						Action: Add,
-						To:     minusTwo + 1,
-						Data:   fmt.Sprintf(replacements[l.Type], l.Data, indentStr),
-					})
-				} else if firstPublic >= 0 {
+				if firstPublic >= 0 {
 					st.changes = append(st.changes, Change{
 						Action: Add,
 						To:     firstPublic + 1,
+						Data:   fmt.Sprintf(replacements[l.Type], l.Data, indentStr),
+					})
+				} else if minusTwoData.Type == StructDecl {
+					st.changes = append(st.changes, Change{
+						Action: Add,
+						To:     minusTwo + 1,
 						Data:   fmt.Sprintf(replacements[l.Type], l.Data, indentStr),
 					})
 				} else if firstLabel >= 0 {
