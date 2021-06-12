@@ -16,12 +16,13 @@ func _() {
 	_ = x[DisallowCopyAndAssign-5]
 	_ = x[DisallowImplicitConstructors-6]
 	_ = x[ClassDecl-7]
-	_ = x[Label-8]
+	_ = x[StructDecl-8]
+	_ = x[Label-9]
 }
 
-const _LineType_name = "UnrelatedEmptyPreprocessorDirectiveDisallowCopyDisallowAssignDisallowCopyAndAssignDisallowImplicitConstructorsClassDeclLabel"
+const _LineType_name = "UnrelatedEmptyPreprocessorDirectiveDisallowCopyDisallowAssignDisallowCopyAndAssignDisallowImplicitConstructorsClassDeclStructDeclLabel"
 
-var _LineType_index = [...]uint8{0, 9, 14, 35, 47, 61, 82, 110, 119, 124}
+var _LineType_index = [...]uint8{0, 9, 14, 35, 47, 61, 82, 110, 119, 129, 134}
 
 func (i LineType) String() string {
 	if i < 0 || i >= LineType(len(_LineType_index)-1) {

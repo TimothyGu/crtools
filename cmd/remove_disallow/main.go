@@ -16,6 +16,7 @@ type Change struct {
 	Action   Action
 	From, To int
 	Data     string
+	IsStruct bool
 }
 
 type Action int
@@ -63,10 +64,10 @@ func scan(r io.Reader) (string, error) {
 			st.startOfIndent[ind] = lineNum
 		}
 
-		if l.Type == Label {
+		if l.Type == Label && ind >= 1 {
 			minusOne := st.startOfIndent[ind-1]
 			minusOneData := lineStuff[minusOne]
-			if minusOneData.Type == ClassDecl {
+			if minusOneData.Type == ClassDecl || minusOneData.Type == StructDecl {
 				st.labels[minusOne] = append(st.labels[minusOne], lineNum)
 			}
 		}
@@ -106,7 +107,7 @@ func scan(r io.Reader) (string, error) {
 				minusTwoData := lineStuff[minusTwo]
 				log.Printf("ind-2 type: %s(%s) (line %d)", minusTwoData.Type, minusTwoData.Data, minusTwo+1)
 
-				if minusTwoData.Type != ClassDecl {
+				if minusTwoData.Type != ClassDecl && minusTwoData.Type != StructDecl {
 					return "", fmt.Errorf("%s(%s) (line %d) mismatches %s(%s) (line %d)", l.Type, l.Data, lineNum+1, minusTwoData.Type, minusTwoData.Data, minusTwo+1)
 				} else if l.Data != minusTwoData.Data {
 					return "", fmt.Errorf("%s(%s) (line %d) != %s(%s) (line %d)", l.Type, l.Data, lineNum+1, minusTwoData.Type, minusTwoData.Data, minusTwo+1)
@@ -137,7 +138,13 @@ func scan(r io.Reader) (string, error) {
 				})
 
 				indentStr := strings.Repeat(" ", ind)
-				if firstPublic >= 0 {
+				if minusTwoData.Type == StructDecl {
+					st.changes = append(st.changes, Change{
+						Action: Add,
+						To:     minusTwo + 1,
+						Data:   fmt.Sprintf(replacements[l.Type], l.Data, indentStr),
+					})
+				} else if firstPublic >= 0 {
 					st.changes = append(st.changes, Change{
 						Action: Add,
 						To:     firstPublic + 1,
@@ -221,6 +228,7 @@ const (
 	DisallowCopyAndAssign
 	DisallowImplicitConstructors
 	ClassDecl
+	StructDecl
 	Label
 )
 
@@ -245,8 +253,8 @@ var (
 	isDisallowCopyAndAssign = regexp.MustCompile(`^ *DISALLOW_COPY_AND_ASSIGN\(([^)]*)\);`)
 	isDisallowImplicitCtors = regexp.MustCompile(`^ *DISALLOW_IMPLICIT_CONSTRUCTORS\(([^)]*)\);`)
 	isEnumClass             = regexp.MustCompile(`\benum class\b`)
-	extractClassDeclFinal   = regexp.MustCompile(`\bclass\b(?: [^:]*)? (?:\w+::)*([^: ]*) final(?:$| (?::.*)?)`)
-	extractClassDecl        = regexp.MustCompile(`\bclass\b(?: [^:]*)? (?:\w+::)*([^: {]*)(?:$| {)`)
+	extractClassDeclFinal   = regexp.MustCompile(`\b(class|struct)\b(?: [^:]*)? (?:\w+::)*([^: ]*) final(?:$| (?::.*)?)`)
+	extractClassDecl        = regexp.MustCompile(`\b(class|struct)\b(?: [^:]*)? (?:\w+::)*([^: {]*)(?:$| {| (?::.*)?)`)
 	extractLabel            = regexp.MustCompile(`^ *(\w+):$`)
 	isPreprocDirective      = regexp.MustCompile(`^ *#`)
 )
@@ -265,15 +273,23 @@ func detect(line string) Line {
 	} else if isEnumClass.MatchString(line) {
 		return Line{Type: Unrelated}
 	} else if m := extractClassDeclFinal.FindStringSubmatch(line); m != nil {
-		if m[1] == "CORE_EXPORT" || m[1] == "final" || m[1] == "{" {
-			log.Fatalf("bad class name (final): %s from %s", m[1], line)
+		if m[2] == "CORE_EXPORT" || m[2] == "final" || m[2] == "{" {
+			log.Fatalf("bad class name (final): %s from %s", m[2], line)
 		}
-		return Line{Type: ClassDecl, Data: m[1]}
+		t := ClassDecl
+		if m[1] == "struct" {
+			t = StructDecl
+		}
+		return Line{Type: t, Data: m[2]}
 	} else if m := extractClassDecl.FindStringSubmatch(line); m != nil {
-		if m[1] == "CORE_EXPORT" || m[1] == "final" || m[1] == "{" {
-			log.Fatalf("bad class name: %s from %s", m[1], line)
+		if m[2] == "CORE_EXPORT" || m[2] == "final" || m[2] == "{" {
+			log.Fatalf("bad class name: %s from %s", m[2], line)
 		}
-		return Line{Type: ClassDecl, Data: m[1]}
+		t := ClassDecl
+		if m[1] == "struct" {
+			t = StructDecl
+		}
+		return Line{Type: t, Data: m[2]}
 	} else if m := extractLabel.FindStringSubmatch(line); m != nil {
 		return Line{Type: Label, Data: m[1]}
 	} else if numIndent(line) == -1 {
