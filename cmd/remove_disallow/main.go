@@ -274,7 +274,12 @@ func detect(line string) Line {
 		return Line{Type: Unrelated}
 	} else if m := extractClassDeclFinal.FindStringSubmatch(line); m != nil {
 		if m[2] == "CORE_EXPORT" || m[2] == "final" || m[2] == "{" {
-			log.Fatalf("bad class name (final): %s from %s", m[2], line)
+			msg := fmt.Sprintf("bad class name (final): %s from %s", m[2], line)
+			log.Print(msg)
+			if strings.HasSuffix(line, " CORE_EXPORT") {
+				return Line{Type: Unrelated}
+			}
+			panic(msg)
 		}
 		t := ClassDecl
 		if m[1] == "struct" {
@@ -283,7 +288,12 @@ func detect(line string) Line {
 		return Line{Type: t, Data: m[2]}
 	} else if m := extractClassDecl.FindStringSubmatch(line); m != nil {
 		if m[2] == "CORE_EXPORT" || m[2] == "final" || m[2] == "{" {
-			log.Fatalf("bad class name: %s from %s", m[2], line)
+			msg := fmt.Sprintf("bad class name: %s from %s", m[2], line)
+			log.Print(msg)
+			if strings.HasSuffix(line, " CORE_EXPORT") {
+				return Line{Type: Unrelated}
+			}
+			panic(msg)
 		}
 		t := ClassDecl
 		if m[1] == "struct" {
