@@ -136,6 +136,16 @@ func scan(r io.Reader) (string, error) {
 					Action: Rem,
 					From:   lineNum,
 				})
+				for j := lineNum - 1; j >= 0; j-- {
+					if lineStuff[j].Type == Empty {
+						st.changes = append(st.changes, Change{
+							Action: Rem,
+							From:   j,
+						})
+					} else {
+						break
+					}
+				}
 
 				indentStr := strings.Repeat(" ", ind)
 				if firstPublic >= 0 {
